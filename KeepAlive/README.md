@@ -4,6 +4,29 @@ The KeepAlive service is a C++ application that periodically pings a list of con
 
 If the `config.json` file is not found, the keep-alive functionality will be disabled, but the health check endpoint will remain active.
 
+## Configuration (`config.json`)
+
+The `config.json` file defines the URLs that the service will ping. It contains a single key, `targets`, which is an array of objects. Each object in the array represents a target to be pinged and must have the following keys:
+
+*   `url` (string): The URL to be pinged.
+*   `interval` (integer): The interval in seconds at which to ping the URL.
+
+**Example `config.json`:**
+```json
+{
+    "targets": [
+        {
+            "url": "https://www.google.com",
+            "interval": 60
+        },
+        {
+            "url": "https://www.github.com",
+            "interval": 120
+        }
+    ]
+}
+```
+
 ## Health Check
 
 The service includes a health check endpoint to monitor its status.
