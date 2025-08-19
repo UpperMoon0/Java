@@ -26,11 +26,26 @@ To build and run the KeepAlive service using Docker, follow these steps:
 
 2.  **Run the Docker container:**
 
+    To run the container, you can choose one of two methods for providing the `config.json` file.
+
+    **Option A: Mount `config.json` from the Host (Recommended)**
+
+    This method is flexible as it allows you to change the configuration without rebuilding the image.
+
+    ```sh
+    docker run -d -p 8080:8080 \
+      -v /path/to/your/config.json:/app/config.json \
+      --name keepalive-container keepalive-service
+    ```
+    *Replace `/path/to/your/config.json` with the actual path on your host machine.*
+
+    **Option B: Use the `config.json` Baked into the Image**
+
+    If your configuration is static, you can use the `config.json` file that was copied into the image during the build.
+
     ```sh
     docker run -d -p 8080:8080 --name keepalive-container keepalive-service
     ```
-
-    This command starts the container in detached mode and maps port `8080` of the container to port `8080` on the host.
 
 3.  **Verify the health check:**
 
