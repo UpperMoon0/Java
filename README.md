@@ -1,8 +1,6 @@
 # KeepAlive Service
 
-The KeepAlive service is a C++ application that periodically pings a list of configured URLs to ensure they are responsive. It also exposes an HTTP endpoint for health checks.
-
-If the `config.json` file is not found, the keep-alive functionality will be disabled, but the health check endpoint will remain active.
+The KeepAlive service is a C++ application that periodically pings a list of configured URLs to keep them from idling. It features a dynamic configuration that can be updated at runtime via a RESTful API, and it exposes an HTTP endpoint for health checks.
 
 ## Configuration (`config.json`)
 
@@ -27,15 +25,42 @@ The `config.json` file defines the URLs that the service will ping. It contains 
 }
 ```
 
-## Health Check
+If the `config.json` file is not found, the service will start with an empty list of targets.
 
-The service includes a health check endpoint to monitor its status.
+## API Endpoints
+
+The service provides several API endpoints for managing the configuration and monitoring the service's health.
+
+### Health Check
 
 *   **URL**: `/health`
 *   **Method**: `GET`
 *   **Success Response**:
     *   **Code**: 200 OK
     *   **Content**: `OK`
+
+### Configuration Management
+
+#### Get Current Configuration
+*   **URL**: `/config`
+*   **Method**: `GET`
+*   **Success Response**:
+    *   **Code**: 200 OK
+    *   **Content**: The current `config.json` as a JSON object.
+
+#### Add a New Target
+*   **URL**: `/config`
+*   **Method**: `PUT`
+*   **Body**: A JSON object representing the new target (e.g., `{"url": "http://example.com", "interval": 300}`).
+*   **Success Response**:
+    *   **Code**: 200 OK
+
+#### Delete a Target
+*   **URL**: `/config`
+*   **Method**: `DELETE`
+*   **Body**: A JSON object with the URL of the target to delete (e.g., `{"url": "http://example.com"}`).
+*   **Success Response**:
+    *   **Code**: 200 OK
 
 ## Building and Running with Docker
 
@@ -49,10 +74,7 @@ To build and run the KeepAlive service using Docker, follow these steps:
 
 2.  **Run the Docker container:**
 
-    To run the container, you can choose one of two methods for providing the `config.json` file.
-
-    **Option A: Mount `config.json` from the Host (Recommended)**
-
+    Mount `config.json` from the Host
     This method is flexible as it allows you to change the configuration without rebuilding the image.
 
     ```sh
@@ -61,14 +83,6 @@ To build and run the KeepAlive service using Docker, follow these steps:
       --name keepalive-container keepalive-service
     ```
     *Replace `/path/to/your/config.json` with the actual path on your host machine.*
-
-    **Option B: Use the `config.json` Baked into the Image**
-
-    If your configuration is static, you can use the `config.json` file that was copied into the image during the build.
-
-    ```sh
-    docker run -d -p 8080:8080 --name keepalive-container keepalive-service
-    ```
 
 3.  **Verify the health check:**
 

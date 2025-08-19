@@ -33,17 +33,17 @@ RUN git clone https://github.com/yhirose/cpp-httplib.git /usr/src/cpp-httplib &&
 
 # Copy source code
 WORKDIR /app
+COPY src/ ./src
+COPY include/ ./include
 COPY main.cpp .
-COPY config.json .
 
 # Compile the application
-RUN g++ -std=c++17 main.cpp -o keepalive -I/usr/local/include -L/usr/local/lib -lcpr -lcurl -lpthread
+RUN g++ -std=c++17 -I/app/include src/*.cpp main.cpp -o keepalive -I/usr/local/include -L/usr/local/lib -lcpr -lcurl -lpthread
 
 # Stage 2: Create the final image
 FROM debian:trixie-slim
 WORKDIR /app
 COPY --from=builder /app/keepalive .
-COPY --from=builder /app/config.json .
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y libcurl4 libssl3 libstdc++6 && rm -rf /var/lib/apt/lists/*

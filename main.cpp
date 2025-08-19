@@ -1,68 +1,39 @@
+#include "http_server.h"
+#include "config_manager.h"
+#include "keep_alive.h"
 #include <iostream>
-#include <vector>
-#include <string>
-#include <thread>
-#include <chrono>
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <cpr/cpr.h>
-#include <httplib.h>
+#include <csignal>
+#include <memory>
 
-using json = nlohmann::json;
+std::unique_ptr<keep_alive::KeepAlive> keep_alive_ptr;
+std::unique_ptr<HttpServer> http_server_ptr;
 
-struct Target {
-    std::string url;
-    int interval;
-};
-
-void keep_alive(const Target& target) {
-    while (true) {
-        auto response = cpr::Get(cpr::Url{target.url});
-        if (response.status_code == 200) {
-            std::cout << "Successfully pinged " << target.url << std::endl;
-        } else {
-            std::cerr << "Failed to ping " << target.url << " - Status code: " << response.status_code << std::endl;
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(target.interval));
+void signal_handler(int signum) {
+    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    if (keep_alive_ptr) {
+        keep_alive_ptr->stop();
     }
-}
-
-void start_http_server() {
-    httplib::Server svr;
-    svr.Get("/health", [](const httplib::Request &, httplib::Response &res) {
-        res.set_content("OK", "text/plain");
-    });
-    svr.listen("0.0.0.0", 8080);
+    if (http_server_ptr) {
+        http_server_ptr->stop();
+    }
+    exit(signum);
 }
 
 int main() {
-    std::thread http_thread(start_http_server);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
-    std::ifstream f("config.json");
-    if (!f.is_open()) {
-        std::cerr << "Could not open config.json. The keep-alive functionality will be disabled, but the health check remains active." << std::endl;
-    } else {
-        json data = json::parse(f);
-        std::vector<Target> targets;
-        for (const auto& item : data["targets"]) {
-            targets.push_back({item["url"], item["interval"]});
-        }
+    ConfigManager config_manager("config.json");
 
-        std::vector<std::thread> threads;
-        for (const auto& target : targets) {
-            threads.emplace_back(keep_alive, target);
-        }
+    keep_alive_ptr = std::make_unique<keep_alive::KeepAlive>(config_manager);
+    http_server_ptr = std::make_unique<HttpServer>(config_manager, *keep_alive_ptr);
 
-        for (auto& th : threads) {
-            if (th.joinable()) {
-                th.join();
-            }
-        }
-    }
+    // No need to call load_config here, it's called in the constructor of ConfigManager
 
-    if (http_thread.joinable()) {
-        http_thread.join();
-    }
+    keep_alive_ptr->start();
+    
+    std::cout << "Starting HTTP server on port 8080" << std::endl;
+    http_server_ptr->start();
 
     return 0;
 }
