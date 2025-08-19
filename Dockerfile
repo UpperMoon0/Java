@@ -1,11 +1,13 @@
 # Stage 1: Build the application
-FROM gcc:latest as builder
+FROM gcc:latest AS builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     cmake \
     git \
-    libssl-dev
+    libssl-dev \
+    meson \
+    libunistring-dev
 
 # Clone and build cpr
 RUN git clone https://github.com/libcpr/cpr.git /usr/src/cpr && \
@@ -38,13 +40,20 @@ COPY config.json .
 RUN g++ -std=c++17 main.cpp -o keepalive -I/usr/local/include -L/usr/local/lib -lcpr -lcurl -lpthread
 
 # Stage 2: Create the final image
-FROM debian:buster-slim
+FROM debian:trixie-slim
 WORKDIR /app
 COPY --from=builder /app/keepalive .
 COPY --from=builder /app/config.json .
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y libcurl4 libssl1.1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libcurl4 libssl3 libstdc++6 && rm -rf /var/lib/apt/lists/*
+
+# Copy CPR library from builder
+COPY --from=builder /usr/local/lib/libcpr.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libcpr.so.1 /usr/local/lib/
+
+# Update library cache
+RUN ldconfig
 
 EXPOSE 8080
 
