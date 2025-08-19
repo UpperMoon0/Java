@@ -2,6 +2,8 @@
 
 The KeepAlive service is a C++ application that periodically pings a list of configured URLs to ensure they are responsive. It also exposes an HTTP endpoint for health checks.
 
+If the `config.json` file is not found, the keep-alive functionality will be disabled, but the health check endpoint will remain active.
+
 ## Health Check
 
 The service includes a health check endpoint to monitor its status.

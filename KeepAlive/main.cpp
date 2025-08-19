@@ -36,28 +36,27 @@ void start_http_server() {
 }
 
 int main() {
-    std::ifstream f("config.json");
-    if (!f.is_open()) {
-        std::cerr << "Could not open config.json" << std::endl;
-        return 1;
-    }
-
-    json data = json::parse(f);
-    std::vector<Target> targets;
-    for (const auto& item : data["targets"]) {
-        targets.push_back({item["url"], item["interval"]});
-    }
-
-    std::vector<std::thread> threads;
-    for (const auto& target : targets) {
-        threads.emplace_back(keep_alive, target);
-    }
-
     std::thread http_thread(start_http_server);
 
-    for (auto& th : threads) {
-        if (th.joinable()) {
-            th.join();
+    std::ifstream f("config.json");
+    if (!f.is_open()) {
+        std::cerr << "Could not open config.json. The keep-alive functionality will be disabled, but the health check remains active." << std::endl;
+    } else {
+        json data = json::parse(f);
+        std::vector<Target> targets;
+        for (const auto& item : data["targets"]) {
+            targets.push_back({item["url"], item["interval"]});
+        }
+
+        std::vector<std::thread> threads;
+        for (const auto& target : targets) {
+            threads.emplace_back(keep_alive, target);
+        }
+
+        for (auto& th : threads) {
+            if (th.joinable()) {
+                th.join();
+            }
         }
     }
 
